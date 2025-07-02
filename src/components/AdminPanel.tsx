@@ -60,7 +60,7 @@ const AdminPanel = () => {
         description: formData.description || null,
         category: formData.category,
         estimated_hours: formData.estimated_hours ? parseInt(formData.estimated_hours) : null,
-        priority: formData.priority
+        priority: formData.priority as 'low' | 'medium' | 'high'
       };
 
       if (editingTemplate) {
@@ -132,7 +132,7 @@ const AdminPanel = () => {
       description: '',
       category: '',
       estimated_hours: '',
-      priority: 'medium'
+      priority: 'medium' as 'low' | 'medium' | 'high'
     });
   };
 
@@ -143,7 +143,7 @@ const AdminPanel = () => {
       description: template.description || '',
       category: template.category,
       estimated_hours: template.estimated_hours?.toString() || '',
-      priority: template.priority
+      priority: template.priority as 'low' | 'medium' | 'high'
     });
     setIsCreateDialogOpen(true);
   };
