@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Globe, CheckCircle, Clock, AlertCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, Globe, CheckCircle, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface Domain {

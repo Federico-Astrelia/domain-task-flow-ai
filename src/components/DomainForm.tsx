@@ -44,7 +44,7 @@ const DomainForm = () => {
 
       if (templatesError) throw templatesError;
 
-      if (templates && templates.length > 0) {
+      if (templates && templates.length > 0 && domain) {
         const domainTasks = templates.map(template => ({
           domain_id: domain.id,
           template_id: template.id,
@@ -68,7 +68,9 @@ const DomainForm = () => {
         description: `Dominio "${formData.name}" creato con successo${templates?.length ? ` con ${templates.length} task` : ''}`
       });
 
-      navigate(`/domains/${domain.id}`);
+      if (domain) {
+        navigate(`/domains/${domain.id}`);
+      }
     } catch (error) {
       console.error('Error creating domain:', error);
       toast({
