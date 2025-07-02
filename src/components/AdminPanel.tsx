@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,16 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Plus, Edit, Trash2, Settings, CheckSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Database } from "@/integrations/supabase/types";
 
-interface TaskTemplate {
-  id: string;
-  title: string;
-  description?: string;
-  category: string;
-  estimated_hours?: number;
-  priority: 'low' | 'medium' | 'high';
-  created_at: string;
-}
+type TaskTemplate = Database['public']['Tables']['task_templates']['Row'];
 
 const AdminPanel = () => {
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);

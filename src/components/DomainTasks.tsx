@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,25 +9,10 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Globe, CheckCircle, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Database } from "@/integrations/supabase/types";
 
-interface Domain {
-  id: string;
-  name: string;
-  url: string;
-  description?: string;
-}
-
-interface DomainTask {
-  id: string;
-  title: string;
-  description?: string;
-  category: string;
-  priority: 'low' | 'medium' | 'high';
-  estimated_hours?: number;
-  completed: boolean;
-  completed_at?: string;
-  created_at: string;
-}
+type Domain = Database['public']['Tables']['domains']['Row'];
+type DomainTask = Database['public']['Tables']['domain_tasks']['Row'];
 
 const DomainTasks = () => {
   const { id } = useParams<{ id: string }>();
