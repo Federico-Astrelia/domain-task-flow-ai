@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Globe, CheckCircle, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
+import SubtaskManager from "./SubtaskManager";
+import TaskComments from "./TaskComments";
 
 type Domain = Database['public']['Tables']['domains']['Row'];
 type DomainTask = Database['public']['Tables']['domain_tasks']['Row'];
@@ -309,59 +311,68 @@ const DomainTasks = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         {categoryTasks.map((task) => (
                           <div
                             key={task.id}
-                            className={`flex items-start gap-4 p-4 rounded-lg border-2 transition-all duration-200 ${
+                            className={`p-6 rounded-lg border-2 transition-all duration-200 ${
                               task.completed
                                 ? 'bg-green-50 border-green-200'
                                 : 'bg-white border-gray-200 hover:border-blue-300'
                             }`}
                           >
-                            <Checkbox
-                              checked={task.completed}
-                              onCheckedChange={(checked) => 
-                                handleTaskToggle(task.id, checked as boolean)
-                              }
-                              className="mt-1"
-                            />
-                            
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-2">
-                                <h4 className={`font-medium ${
-                                  task.completed 
-                                    ? 'text-gray-500 line-through' 
-                                    : 'text-gray-900'
-                                }`}>
-                                  {task.title}
-                                </h4>
-                                <div className="flex items-center gap-2">
-                                  <Badge className={getPriorityColor(task.priority)}>
-                                    {getPriorityLabel(task.priority)}
-                                  </Badge>
-                                  {task.estimated_hours && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {task.estimated_hours}h
+                            <div className="flex items-start gap-4">
+                              <Checkbox
+                                checked={task.completed}
+                                onCheckedChange={(checked) => 
+                                  handleTaskToggle(task.id, checked as boolean)
+                                }
+                                className="mt-1"
+                              />
+                              
+                              <div className="flex-1 space-y-4">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h4 className={`font-medium text-lg ${
+                                    task.completed 
+                                      ? 'text-gray-500 line-through' 
+                                      : 'text-gray-900'
+                                  }`}>
+                                    {task.title}
+                                  </h4>
+                                  <div className="flex items-center gap-2">
+                                    <Badge className={getPriorityColor(task.priority)}>
+                                      {getPriorityLabel(task.priority)}
                                     </Badge>
-                                  )}
+                                    {task.estimated_hours && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {task.estimated_hours}h
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
+                                
+                                {task.description && (
+                                  <p className={`text-sm mb-4 ${
+                                    task.completed ? 'text-gray-400' : 'text-gray-600'
+                                  }`}>
+                                    {task.description}
+                                  </p>
+                                )}
+                                
+                                {task.completed && task.completed_at && (
+                                  <div className="text-sm text-green-600 flex items-center gap-1 mb-4">
+                                    <CheckCircle className="h-4 w-4" />
+                                    Completato il {new Date(task.completed_at).toLocaleDateString('it-IT')}
+                                  </div>
+                                )}
+                                
+                                <SubtaskManager 
+                                  taskId={task.id} 
+                                  isTaskCompleted={task.completed}
+                                />
+                                
+                                <TaskComments taskId={task.id} />
                               </div>
-                              
-                              {task.description && (
-                                <p className={`text-sm mb-2 ${
-                                  task.completed ? 'text-gray-400' : 'text-gray-600'
-                                }`}>
-                                  {task.description}
-                                </p>
-                              )}
-                              
-                              {task.completed && task.completed_at && (
-                                <div className="text-xs text-green-600 flex items-center gap-1">
-                                  <CheckCircle className="h-3 w-3" />
-                                  Completato il {new Date(task.completed_at).toLocaleDateString('it-IT')}
-                                </div>
-                              )}
                             </div>
                           </div>
                         ))}

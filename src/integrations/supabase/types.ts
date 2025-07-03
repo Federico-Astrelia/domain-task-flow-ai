@@ -75,6 +75,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          status: string | null
           updated_at: string
           url: string
         }
@@ -83,6 +84,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          status?: string | null
           updated_at?: string
           url: string
         }
@@ -91,10 +93,94 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          status?: string | null
           updated_at?: string
           url?: string
         }
         Relationships: []
+      }
+      subtasks: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          parent_task_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          parent_task_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          parent_task_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subtasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "domain_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          subtask_id: string | null
+          task_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          subtask_id?: string | null
+          task_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          subtask_id?: string | null
+          task_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_subtask_id_fkey"
+            columns: ["subtask_id"]
+            isOneToOne: false
+            referencedRelation: "subtasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "domain_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_templates: {
         Row: {
