@@ -12,42 +12,54 @@ export type Database = {
       domain_tasks: {
         Row: {
           category: string
+          checklist_items: Json | null
           completed: boolean
           completed_at: string | null
           created_at: string
+          dependencies: string[] | null
           description: string | null
           domain_id: string
           estimated_hours: number | null
           id: string
           priority: string
+          reference_links: string[] | null
+          tags: string[] | null
           template_id: string | null
           title: string
           updated_at: string
         }
         Insert: {
           category: string
+          checklist_items?: Json | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
+          dependencies?: string[] | null
           description?: string | null
           domain_id: string
           estimated_hours?: number | null
           id?: string
           priority: string
+          reference_links?: string[] | null
+          tags?: string[] | null
           template_id?: string | null
           title: string
           updated_at?: string
         }
         Update: {
           category?: string
+          checklist_items?: Json | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
+          dependencies?: string[] | null
           description?: string | null
           domain_id?: string
           estimated_hours?: number | null
           id?: string
           priority?: string
+          reference_links?: string[] | null
+          tags?: string[] | null
           template_id?: string | null
           title?: string
           updated_at?: string
@@ -185,35 +197,85 @@ export type Database = {
       task_templates: {
         Row: {
           category: string
+          checklist_items: Json | null
           created_at: string
+          dependencies: string[] | null
           description: string | null
           estimated_hours: number | null
           id: string
           priority: string
+          reference_links: string[] | null
+          tags: string[] | null
           title: string
           updated_at: string
         }
         Insert: {
           category: string
+          checklist_items?: Json | null
           created_at?: string
+          dependencies?: string[] | null
           description?: string | null
           estimated_hours?: number | null
           id?: string
           priority: string
+          reference_links?: string[] | null
+          tags?: string[] | null
           title: string
           updated_at?: string
         }
         Update: {
           category?: string
+          checklist_items?: Json | null
           created_at?: string
+          dependencies?: string[] | null
           description?: string | null
           estimated_hours?: number | null
           id?: string
           priority?: string
+          reference_links?: string[] | null
+          tags?: string[] | null
           title?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      template_subtasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          order_index: number | null
+          template_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number | null
+          template_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number | null
+          template_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_subtasks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

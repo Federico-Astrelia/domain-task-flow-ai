@@ -7,14 +7,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Globe, CheckCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, Globe, CheckCircle, Sparkles, ExternalLink, Tag, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import SubtaskManager from "./SubtaskManager";
 import TaskComments from "./TaskComments";
+import ChecklistManager from "./ChecklistManager";
 
 type Domain = Database['public']['Tables']['domains']['Row'];
 type DomainTask = Database['public']['Tables']['domain_tasks']['Row'];
+
+interface ChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
 
 const DomainTasks = () => {
   const { id } = useParams<{ id: string }>();
@@ -94,6 +101,33 @@ const DomainTasks = () => {
       toast({
         title: "Errore",
         description: "Impossibile aggiornare il task",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleChecklistUpdate = async (taskId: string, checklist: ChecklistItem[]) => {
+    try {
+      const { error } = await supabase
+        .from('domain_tasks')
+        .update({ checklist_items: checklist })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      // Update local state
+      setTasks(prevTasks =>
+        prevTasks.map(task =>
+          task.id === taskId
+            ? { ...task, checklist_items: checklist }
+            : task
+        )
+      );
+    } catch (error) {
+      console.error('Error updating checklist:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare la checklist",
         variant: "destructive"
       });
     }
@@ -357,6 +391,66 @@ const DomainTasks = () => {
                                   }`}>
                                     {task.description}
                                   </p>
+                                )}
+
+                                {/* Tags */}
+                                {task.tags && task.tags.length > 0 && (
+                                  <div className="flex items-center gap-2 mb-4">
+                                    <Tag className="h-4 w-4 text-gray-500" />
+                                    <div className="flex flex-wrap gap-1">
+                                      {task.tags.map(tag => (
+                                        <Badge key={tag} variant="outline" className="text-xs">
+                                          {tag}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Dependencies */}
+                                {task.dependencies && task.dependencies.length > 0 && (
+                                  <div className="flex items-center gap-2 mb-4">
+                                    <Users className="h-4 w-4 text-gray-500" />
+                                    <div className="flex flex-wrap gap-1">
+                                      {task.dependencies.map(dep => (
+                                        <Badge key={dep} variant="secondary" className="text-xs">
+                                          {dep}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Reference Links */}
+                                {task.reference_links && task.reference_links.length > 0 && (
+                                  <div className="flex items-start gap-2 mb-4">
+                                    <ExternalLink className="h-4 w-4 text-gray-500 mt-1" />
+                                    <div className="space-y-1">
+                                      {task.reference_links.map(link => (
+                                        <a
+                                          key={link}
+                                          href={link}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="block text-blue-600 hover:underline text-sm"
+                                        >
+                                          {link}
+                                        </a>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Checklist */}
+                                {task.checklist_items && Array.isArray(task.checklist_items) && task.checklist_items.length > 0 && (
+                                  <div className="mb-4">
+                                    <h5 className="font-medium text-gray-900 mb-2">Checklist</h5>
+                                    <ChecklistManager 
+                                      items={task.checklist_items}
+                                      onChange={(items) => handleChecklistUpdate(task.id, items)}
+                                      readonly={task.completed}
+                                    />
+                                  </div>
                                 )}
                                 
                                 {task.completed && task.completed_at && (
