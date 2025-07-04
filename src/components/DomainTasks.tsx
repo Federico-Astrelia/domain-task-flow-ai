@@ -107,7 +107,7 @@ const DomainTasks = () => {
     try {
       const { error } = await supabase
         .from('domain_tasks')
-        .update({ checklist_items: newChecklist })
+        .update({ checklist_items: newChecklist as any })
         .eq('id', taskId);
 
       if (error) throw error;
@@ -115,7 +115,7 @@ const DomainTasks = () => {
       setTasks(prevTasks =>
         prevTasks.map(task =>
           task.id === taskId
-            ? { ...task, checklist_items: newChecklist }
+            ? { ...task, checklist_items: newChecklist as any }
             : task
         )
       );
@@ -361,7 +361,7 @@ const DomainTasks = () => {
                   )}
                   
                   {/* Checklist */}
-                  {task.checklist_items && (task.checklist_items as ChecklistItem[]).length > 0 && (
+                  {task.checklist_items && Array.isArray(task.checklist_items) && task.checklist_items.length > 0 && (
                     <div>
                       <span className="text-sm font-medium text-gray-700 mb-2 block">Checklist</span>
                       <ChecklistManager

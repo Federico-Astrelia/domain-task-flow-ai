@@ -99,7 +99,7 @@ const AdminPanel = () => {
         tags: formData.tags.length > 0 ? formData.tags : null,
         dependencies: formData.dependencies.length > 0 ? formData.dependencies : null,
         reference_links: formData.reference_links.length > 0 ? formData.reference_links : null,
-        checklist_items: formData.checklist_items
+        checklist_items: formData.checklist_items as any
       };
 
       if (editingTemplate) {
@@ -575,7 +575,7 @@ const AdminPanel = () => {
                       </div>
                     )}
                     
-                    {template.checklist_items && (template.checklist_items as ChecklistItem[]).length > 0 && (
+                    {template.checklist_items && Array.isArray(template.checklist_items) && template.checklist_items.length > 0 && (
                       <div>
                         <span className="text-sm font-medium text-gray-700 mr-2">Checklist:</span>
                         <ChecklistManager
