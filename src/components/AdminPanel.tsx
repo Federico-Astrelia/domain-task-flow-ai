@@ -1,15 +1,16 @@
+
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, Settings, CheckSquare, ArrowLeft, Tag, Link, Users } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Edit, Trash2, Save, X, Tag, Link, CheckSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import TemplateSubtaskManager from "./TemplateSubtaskManager";
@@ -24,17 +25,16 @@ interface ChecklistItem {
 }
 
 const AdminPanel = () => {
-  const navigate = useNavigate();
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: '',
+    priority: 'medium',
     estimated_hours: '',
-    priority: 'medium' as 'low' | 'medium' | 'high',
     tags: [] as string[],
     dependencies: [] as string[],
     reference_links: [] as string[],
@@ -69,6 +69,23 @@ const AdminPanel = () => {
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      category: '',
+      priority: 'medium',
+      estimated_hours: '',
+      tags: [],
+      dependencies: [],
+      reference_links: [],
+      checklist_items: []
+    });
+    setNewTag('');
+    setNewDependency('');
+    setNewLink('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -77,21 +94,22 @@ const AdminPanel = () => {
         title: formData.title,
         description: formData.description || null,
         category: formData.category,
+        priority: formData.priority,
         estimated_hours: formData.estimated_hours ? parseInt(formData.estimated_hours) : null,
-        priority: formData.priority as 'low' | 'medium' | 'high',
         tags: formData.tags.length > 0 ? formData.tags : null,
         dependencies: formData.dependencies.length > 0 ? formData.dependencies : null,
         reference_links: formData.reference_links.length > 0 ? formData.reference_links : null,
-        checklist_items: formData.checklist_items.length > 0 ? formData.checklist_items : null
+        checklist_items: formData.checklist_items
       };
 
       if (editingTemplate) {
         const { error } = await supabase
           .from('task_templates')
           .update(templateData)
-          .eq('id', editingTemplate.id);
+          .eq('id', editingTemplate);
 
         if (error) throw error;
+
         toast({
           title: "Successo",
           description: "Template aggiornato con successo"
@@ -102,6 +120,7 @@ const AdminPanel = () => {
           .insert([templateData]);
 
         if (error) throw error;
+
         toast({
           title: "Successo",
           description: "Template creato con successo"
@@ -122,14 +141,32 @@ const AdminPanel = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Sei sicuro di voler eliminare questo template?')) return;
+  const handleEdit = (template: TaskTemplate) => {
+    setFormData({
+      title: template.title,
+      description: template.description || '',
+      category: template.category,
+      priority: template.priority,
+      estimated_hours: template.estimated_hours?.toString() || '',
+      tags: template.tags || [],
+      dependencies: template.dependencies || [],
+      reference_links: template.reference_links || [],
+      checklist_items: (template.checklist_items as ChecklistItem[]) || []
+    });
+    setEditingTemplate(template.id);
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleDelete = async (templateId: string) => {
+    if (!confirm('Sei sicuro di voler eliminare questo template? Questa azione eliminerà anche tutti i sottotask associati.')) {
+      return;
+    }
 
     try {
       const { error } = await supabase
         .from('task_templates')
         .delete()
-        .eq('id', id);
+        .eq('id', templateId);
 
       if (error) throw error;
 
@@ -137,6 +174,7 @@ const AdminPanel = () => {
         title: "Successo",
         description: "Template eliminato con successo"
       });
+
       fetchTemplates();
     } catch (error) {
       console.error('Error deleting template:', error);
@@ -148,107 +186,37 @@ const AdminPanel = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      category: '',
-      estimated_hours: '',
-      priority: 'medium' as 'low' | 'medium' | 'high',
-      tags: [],
-      dependencies: [],
-      reference_links: [],
-      checklist_items: []
-    });
-    setNewTag('');
-    setNewDependency('');
-    setNewLink('');
-  };
-
-  const handleEdit = (template: TaskTemplate) => {
-    setEditingTemplate(template);
-    setFormData({
-      title: template.title,
-      description: template.description || '',
-      category: template.category,
-      estimated_hours: template.estimated_hours?.toString() || '',
-      priority: template.priority as 'low' | 'medium' | 'high',
-      tags: template.tags || [],
-      dependencies: template.dependencies || [],
-      reference_links: template.reference_links || [],
-      checklist_items: template.checklist_items ? 
-        (Array.isArray(template.checklist_items) ? template.checklist_items : []) : []
-    });
-    setIsCreateDialogOpen(true);
-  };
-
   const addTag = () => {
     if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, newTag.trim()]
-      }));
+      setFormData({...formData, tags: [...formData.tags, newTag.trim()]});
       setNewTag('');
     }
   };
 
-  const removeTag = (tag: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(t => t !== tag)
-    }));
+  const removeTag = (tagToRemove: string) => {
+    setFormData({...formData, tags: formData.tags.filter(tag => tag !== tagToRemove)});
   };
 
   const addDependency = () => {
     if (newDependency.trim() && !formData.dependencies.includes(newDependency.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        dependencies: [...prev.dependencies, newDependency.trim()]
-      }));
+      setFormData({...formData, dependencies: [...formData.dependencies, newDependency.trim()]});
       setNewDependency('');
     }
   };
 
-  const removeDependency = (dependency: string) => {
-    setFormData(prev => ({
-      ...prev,
-      dependencies: prev.dependencies.filter(d => d !== dependency)
-    }));
+  const removeDependency = (depToRemove: string) => {
+    setFormData({...formData, dependencies: formData.dependencies.filter(dep => dep !== depToRemove)});
   };
 
   const addLink = () => {
     if (newLink.trim() && !formData.reference_links.includes(newLink.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        reference_links: [...prev.reference_links, newLink.trim()]
-      }));
+      setFormData({...formData, reference_links: [...formData.reference_links, newLink.trim()]});
       setNewLink('');
     }
   };
 
-  const removeLink = (link: string) => {
-    setFormData(prev => ({
-      ...prev,
-      reference_links: prev.reference_links.filter(l => l !== link)
-    }));
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityLabel = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'Alta';
-      case 'medium': return 'Media';
-      case 'low': return 'Bassa';
-      default: return priority;
-    }
+  const removeLink = (linkToRemove: string) => {
+    setFormData({...formData, reference_links: formData.reference_links.filter(link => link !== linkToRemove)});
   };
 
   if (loading) {
@@ -257,9 +225,9 @@ const AdminPanel = () => {
         <div className="max-w-6xl mx-auto">
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid gap-6">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
+                <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
               ))}
             </div>
           </div>
@@ -269,261 +237,223 @@ const AdminPanel = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="max-w-6xl mx-auto p-6">
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="mb-4 hover:bg-white/50"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Torna ai Domini
-          </Button>
-          
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center">
-                <Settings className="h-8 w-8 mr-3 text-blue-600" />
-                Amministrazione
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Pannello Amministrativo
               </h1>
-              <p className="text-lg text-gray-600">
-                Gestisci i template di task predefiniti per tutti i domini
+              <p className="text-gray-600">
+                Gestisci i template dei task che verranno applicati automaticamente a tutti i domini
               </p>
             </div>
-            
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+              setIsCreateDialogOpen(open);
+              if (!open) {
+                resetForm();
+                setEditingTemplate(null);
+              }
+            }}>
               <DialogTrigger asChild>
-                <Button
-                  onClick={() => {
-                    resetForm();
-                    setEditingTemplate(null);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                >
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                   <Plus className="h-4 w-4 mr-2" />
                   Nuovo Template
                 </Button>
               </DialogTrigger>
               
-              <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
-                    {editingTemplate ? 'Modifica Template' : 'Nuovo Template'}
+                    {editingTemplate ? 'Modifica Template' : 'Nuovo Template Task'}
                   </DialogTitle>
                 </DialogHeader>
                 
-                <form onSubmit={handleSubmit}>
-                  <Tabs defaultValue="basic" className="space-y-4">
-                    <TabsList className="grid w-full grid-cols-4">
-                      <TabsTrigger value="basic">Base</TabsTrigger>
-                      <TabsTrigger value="advanced">Avanzato</TabsTrigger>
-                      <TabsTrigger value="checklist">Checklist</TabsTrigger>
-                      <TabsTrigger value="subtasks">Sottotask</TabsTrigger>
-                    </TabsList>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="title">Titolo *</Label>
+                      <Input
+                        id="title"
+                        value={formData.title}
+                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        placeholder="Titolo del task..."
+                        required
+                      />
+                    </div>
                     
-                    <TabsContent value="basic" className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="title">Titolo *</Label>
-                          <Input
-                            id="title"
-                            value={formData.title}
-                            onChange={(e) => setFormData({...formData, title: e.target.value})}
-                            placeholder="es. Controllo SEO, Backup database..."
-                            required
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="category">Categoria *</Label>
-                          <Input
-                            id="category"
-                            value={formData.category}
-                            onChange={(e) => setFormData({...formData, category: e.target.value})}
-                            placeholder="es. SEO, Sicurezza, Manutenzione..."
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="description">Descrizione</Label>
-                        <Textarea
-                          id="description"
-                          value={formData.description}
-                          onChange={(e) => setFormData({...formData, description: e.target.value})}
-                          placeholder="Descrizione dettagliata del task..."
-                          rows={3}
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="priority">Priorità</Label>
-                          <select
-                            id="priority"
-                            value={formData.priority}
-                            onChange={(e) => setFormData({...formData, priority: e.target.value as 'low' | 'medium' | 'high'})}
-                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="low">Bassa</option>
-                            <option value="medium">Media</option>
-                            <option value="high">Alta</option>
-                          </select>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="estimated_hours">Ore stimate</Label>
-                          <Input
-                            id="estimated_hours"
-                            type="number"
-                            value={formData.estimated_hours}
-                            onChange={(e) => setFormData({...formData, estimated_hours: e.target.value})}
-                            placeholder="es. 2"
-                            min="0"
-                            step="0.5"
-                          />
-                        </div>
-                      </div>
-                    </TabsContent>
+                    <div>
+                      <Label htmlFor="category">Categoria *</Label>
+                      <Input
+                        id="category"
+                        value={formData.category}
+                        onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        placeholder="es. SEO, Content, Technical..."
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description">Descrizione</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      placeholder="Descrizione dettagliata del task..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="priority">Priorità</Label>
+                      <Select
+                        value={formData.priority}
+                        onValueChange={(value) => setFormData({...formData, priority: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Bassa</SelectItem>
+                          <SelectItem value="medium">Media</SelectItem>
+                          <SelectItem value="high">Alta</SelectItem>
+                          <SelectItem value="urgent">Urgente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     
-                    <TabsContent value="advanced" className="space-y-4">
-                      <div>
-                        <Label className="flex items-center gap-2">
-                          <Tag className="h-4 w-4" />
-                          Tag
-                        </Label>
-                        <div className="flex gap-2 mb-2">
-                          <Input
-                            value={newTag}
-                            onChange={(e) => setNewTag(e.target.value)}
-                            placeholder="Aggiungi tag..."
-                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                          />
-                          <Button type="button" onClick={addTag} size="sm">
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                    <div>
+                      <Label htmlFor="estimated_hours">Ore Stimate</Label>
+                      <Input
+                        id="estimated_hours"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={formData.estimated_hours}
+                        onChange={(e) => setFormData({...formData, estimated_hours: e.target.value})}
+                        placeholder="8"
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Tags Section */}
+                  <div>
+                    <Label className="flex items-center gap-2 mb-2">
+                      <Tag className="h-4 w-4" />
+                      Tags
+                    </Label>
+                    <div className="flex gap-2 mb-2">
+                      <Input
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        placeholder="Aggiungi tag..."
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                      />
+                      <Button type="button" onClick={addTag} size="sm">
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {formData.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                          {tag}
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} />
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Dependencies Section */}
+                  <div>
+                    <Label className="mb-2 block">Dipendenze</Label>
+                    <div className="flex gap-2 mb-2">
+                      <Input
+                        value={newDependency}
+                        onChange={(e) => setNewDependency(e.target.value)}
+                        placeholder="Aggiungi dipendenza..."
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addDependency())}
+                      />
+                      <Button type="button" onClick={addDependency} size="sm">
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {formData.dependencies.map((dep) => (
+                        <Badge key={dep} variant="outline" className="flex items-center gap-1">
+                          {dep}
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => removeDependency(dep)} />
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Reference Links Section */}
+                  <div>
+                    <Label className="flex items-center gap-2 mb-2">
+                      <Link className="h-4 w-4" />
+                      Link di Riferimento
+                    </Label>
+                    <div className="flex gap-2 mb-2">
+                      <Input
+                        value={newLink}
+                        onChange={(e) => setNewLink(e.target.value)}
+                        placeholder="https://esempio.com"
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLink())}
+                      />
+                      <Button type="button" onClick={addLink} size="sm">
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="space-y-1">
+                      {formData.reference_links.map((link) => (
+                        <div key={link} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                          <span className="text-sm flex-1 truncate">{link}</span>
+                          <X className="h-3 w-3 cursor-pointer text-red-600" onClick={() => removeLink(link)} />
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {formData.tags.map(tag => (
-                            <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                              {tag}
-                              <button
-                                type="button"
-                                onClick={() => removeTag(tag)}
-                                className="ml-1 hover:text-red-600"
-                              >
-                                ×
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="flex items-center gap-2">
-                          <Users className="h-4 w-4" />
-                          Dipendenze
-                        </Label>
-                        <div className="flex gap-2 mb-2">
-                          <Input
-                            value={newDependency}
-                            onChange={(e) => setNewDependency(e.target.value)}
-                            placeholder="Aggiungi dipendenza..."
-                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addDependency())}
-                          />
-                          <Button type="button" onClick={addDependency} size="sm">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {formData.dependencies.map(dep => (
-                            <Badge key={dep} variant="outline" className="flex items-center gap-1">
-                              {dep}
-                              <button
-                                type="button"
-                                onClick={() => removeDependency(dep)}
-                                className="ml-1 hover:text-red-600"
-                              >
-                                ×
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="flex items-center gap-2">
-                          <Link className="h-4 w-4" />
-                          Link di Riferimento
-                        </Label>
-                        <div className="flex gap-2 mb-2">
-                          <Input
-                            value={newLink}
-                            onChange={(e) => setNewLink(e.target.value)}
-                            placeholder="Aggiungi URL..."
-                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLink())}
-                          />
-                          <Button type="button" onClick={addLink} size="sm">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="space-y-1">
-                          {formData.reference_links.map(link => (
-                            <div key={link} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                              <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm truncate">
-                                {link}
-                              </a>
-                              <button
-                                type="button"
-                                onClick={() => removeLink(link)}
-                                className="ml-2 text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="checklist" className="space-y-4">
-                      <div>
-                        <Label>Checklist Integrata</Label>
-                        <ChecklistManager 
-                          items={formData.checklist_items}
-                          onChange={(items) => setFormData({...formData, checklist_items: items})}
-                        />
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="subtasks" className="space-y-4">
-                      {editingTemplate ? (
-                        <TemplateSubtaskManager templateId={editingTemplate.id} />
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <p>Salva prima il template per aggiungere i sottotask</p>
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                  
-                  <div className="flex justify-end gap-3 pt-6 mt-6 border-t">
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Checklist Section */}
+                  <div>
+                    <Label className="flex items-center gap-2 mb-2">
+                      <CheckSquare className="h-4 w-4" />
+                      Checklist
+                    </Label>
+                    <ChecklistManager
+                      items={formData.checklist_items}
+                      onChange={(items) => setFormData({...formData, checklist_items: items})}
+                    />
+                  </div>
+
+                  {/* Subtasks Section - only show for editing existing templates */}
+                  {editingTemplate && (
+                    <div>
+                      <Label className="mb-2 block">Sottotask Template</Label>
+                      <TemplateSubtaskManager templateId={editingTemplate} />
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-3 pt-4">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => {
                         setIsCreateDialogOpen(false);
-                        setEditingTemplate(null);
                         resetForm();
+                        setEditingTemplate(null);
                       }}
                     >
                       Annulla
                     </Button>
                     <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                      {editingTemplate ? 'Salva Modifiche' : 'Crea Template'}
+                      <Save className="h-4 w-4 mr-2" />
+                      {editingTemplate ? 'Aggiorna' : 'Crea'} Template
                     </Button>
                   </div>
                 </form>
@@ -532,62 +462,61 @@ const AdminPanel = () => {
           </div>
         </div>
 
-        {/* Templates Grid */}
         {templates.length === 0 ? (
           <Card className="bg-white border-0 shadow-md">
             <CardContent className="p-12 text-center">
-              <CheckSquare className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <div className="text-6xl mb-4">📋</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 Nessun template ancora
               </h3>
               <p className="text-gray-600 mb-6">
-                Crea il tuo primo template per standardizzare i task su tutti i domini
+                Crea il tuo primo template per automatizzare la creazione di task per tutti i domini
               </p>
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Crea Primo Template
-              </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-4">
             {templates.map((template) => (
-              <Card
-                key={template.id}
-                className="bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                <CardHeader className="pb-4">
+              <Card key={template.id} className="bg-white border-0 shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg font-bold text-gray-900 mb-1">
+                      <CardTitle className="text-xl font-bold text-gray-900 mb-1">
                         {template.title}
                       </CardTitle>
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {template.category}
+                        <Badge variant="outline">{template.category}</Badge>
+                        <Badge 
+                          variant={
+                            template.priority === 'urgent' ? 'destructive' :
+                            template.priority === 'high' ? 'default' :
+                            template.priority === 'medium' ? 'secondary' : 'outline'
+                          }
+                        >
+                          {template.priority === 'low' ? 'Bassa' :
+                           template.priority === 'medium' ? 'Media' :
+                           template.priority === 'high' ? 'Alta' : 'Urgente'}
                         </Badge>
-                        <Badge className={`text-xs ${getPriorityColor(template.priority)}`}>
-                          {getPriorityLabel(template.priority)}
-                        </Badge>
+                        {template.estimated_hours && (
+                          <Badge variant="outline">
+                            {template.estimated_hours}h
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-2">
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         onClick={() => handleEdit(template)}
-                        className="p-2 h-8 w-8"
                       >
                         <Edit className="h-3 w-3" />
                       </Button>
                       <Button
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         onClick={() => handleDelete(template.id)}
-                        className="p-2 h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -595,31 +524,65 @@ const AdminPanel = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  {template.description && (
+                    <p className="text-gray-600 mb-4">{template.description}</p>
+                  )}
+                  
                   <div className="space-y-3">
-                    {template.description && (
-                      <p className="text-sm text-gray-600 line-clamp-3">
-                        {template.description}
-                      </p>
-                    )}
-                    
                     {template.tags && template.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {template.tags.slice(0, 3).map(tag => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {template.tags.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{template.tags.length - 3}
-                          </Badge>
-                        )}
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 mr-2">Tags:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {template.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     )}
                     
-                    {template.estimated_hours && (
-                      <div className="text-xs text-gray-500">
-                        Tempo stimato: {template.estimated_hours}h
+                    {template.dependencies && template.dependencies.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 mr-2">Dipendenze:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {template.dependencies.map((dep) => (
+                            <Badge key={dep} variant="outline" className="text-xs">
+                              {dep}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {template.reference_links && template.reference_links.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 mr-2">Link:</span>
+                        <div className="space-y-1 mt-1">
+                          {template.reference_links.map((link, idx) => (
+                            <div key={idx}>
+                              <a 
+                                href={link} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 underline break-all"
+                              >
+                                {link}
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {template.checklist_items && (template.checklist_items as ChecklistItem[]).length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 mr-2">Checklist:</span>
+                        <ChecklistManager
+                          items={template.checklist_items as ChecklistItem[]}
+                          onChange={() => {}}
+                          readonly={true}
+                        />
                       </div>
                     )}
                   </div>

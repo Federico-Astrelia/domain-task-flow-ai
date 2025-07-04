@@ -1,21 +1,21 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Globe, CheckCircle, Sparkles, ExternalLink, Tag, Users } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, CheckCircle, Clock, AlertCircle, ExternalLink, Tag, Link as LinkIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import SubtaskManager from "./SubtaskManager";
 import TaskComments from "./TaskComments";
 import ChecklistManager from "./ChecklistManager";
 
-type Domain = Database['public']['Tables']['domains']['Row'];
 type DomainTask = Database['public']['Tables']['domain_tasks']['Row'];
+type Domain = Database['public']['Tables']['domains']['Row'];
 
 interface ChecklistItem {
   id: string;
@@ -29,7 +29,6 @@ const DomainTasks = () => {
   const [domain, setDomain] = useState<Domain | null>(null);
   const [tasks, setTasks] = useState<DomainTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
     if (id) {
@@ -49,29 +48,28 @@ const DomainTasks = () => {
       if (domainError) throw domainError;
       setDomain(domainData);
 
-      // Fetch domain tasks
+      // Fetch tasks for this domain
       const { data: tasksData, error: tasksError } = await supabase
         .from('domain_tasks')
         .select('*')
         .eq('domain_id', id)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (tasksError) throw tasksError;
       setTasks(tasksData || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching domain and tasks:', error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati del dominio",
         variant: "destructive"
       });
-      navigate('/');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTaskToggle = async (taskId: string, completed: boolean) => {
+  const handleTaskComplete = async (taskId: string, completed: boolean) => {
     try {
       const { error } = await supabase
         .from('domain_tasks')
@@ -83,11 +81,10 @@ const DomainTasks = () => {
 
       if (error) throw error;
 
-      // Update local state
       setTasks(prevTasks =>
         prevTasks.map(task =>
           task.id === taskId
-            ? { ...task, completed, completed_at: completed ? new Date().toISOString() : undefined }
+            ? { ...task, completed, completed_at: completed ? new Date().toISOString() : null }
             : task
         )
       );
@@ -106,20 +103,19 @@ const DomainTasks = () => {
     }
   };
 
-  const handleChecklistUpdate = async (taskId: string, checklist: ChecklistItem[]) => {
+  const handleChecklistUpdate = async (taskId: string, newChecklist: ChecklistItem[]) => {
     try {
       const { error } = await supabase
         .from('domain_tasks')
-        .update({ checklist_items: checklist })
+        .update({ checklist_items: newChecklist })
         .eq('id', taskId);
 
       if (error) throw error;
 
-      // Update local state
       setTasks(prevTasks =>
         prevTasks.map(task =>
           task.id === taskId
-            ? { ...task, checklist_items: checklist }
+            ? { ...task, checklist_items: newChecklist }
             : task
         )
       );
@@ -135,15 +131,17 @@ const DomainTasks = () => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'urgent': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-500';
     }
   };
 
   const getPriorityLabel = (priority: string) => {
     switch (priority) {
+      case 'urgent': return 'Urgente';
       case 'high': return 'Alta';
       case 'medium': return 'Media';
       case 'low': return 'Bassa';
@@ -151,39 +149,15 @@ const DomainTasks = () => {
     }
   };
 
-  const getFilteredTasks = () => {
-    switch (activeTab) {
-      case 'completed':
-        return tasks.filter(task => task.completed);
-      case 'pending':
-        return tasks.filter(task => !task.completed);
-      default:
-        return tasks;
-    }
-  };
-
-  const completedTasks = tasks.filter(task => task.completed).length;
-  const totalTasks = tasks.length;
-  const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-
-  const groupedTasks = getFilteredTasks().reduce((acc, task) => {
-    if (!acc[task.category]) {
-      acc[task.category] = [];
-    }
-    acc[task.category].push(task);
-    return acc;
-  }, {} as Record<string, DomainTask[]>);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-            <div className="h-32 bg-gray-200 rounded"></div>
             <div className="space-y-4">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
+                <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
               ))}
             </div>
           </div>
@@ -194,290 +168,223 @@ const DomainTasks = () => {
 
   if (!domain) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6 flex items-center justify-center">
-        <Card className="bg-white border-0 shadow-lg">
-          <CardContent className="p-8 text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Dominio non trovato
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Il dominio richiesto non esiste o non è accessibile
-            </p>
-            <Button onClick={() => navigate('/')}>
-              Torna alla Dashboard
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+        <div className="max-w-6xl mx-auto text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Dominio non trovato</h1>
+          <Button onClick={() => navigate('/')} variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Torna alla Home
+          </Button>
+        </div>
       </div>
     );
   }
 
+  const completedTasks = tasks.filter(task => task.completed).length;
+  const totalTasks = tasks.length;
+  const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            className="mb-4 hover:bg-white/50"
+          <Button 
+            onClick={() => navigate('/')} 
+            variant="outline" 
+            className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Torna alla Dashboard
+            Torna alla Home
           </Button>
           
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center mb-2">
-                <Globe className="h-8 w-8 text-blue-600 mr-3" />
-                <h1 className="text-4xl font-bold text-gray-900">
+          <div className="bg-white rounded-lg p-6 shadow-md">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
                   {domain.name}
                 </h1>
-              </div>
-              <p className="text-lg text-gray-600 mb-2">
-                {domain.url}
-              </p>
-              {domain.description && (
-                <p className="text-gray-600">
-                  {domain.description}
+                <p className="text-gray-600 flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  {domain.url}
                 </p>
-              )}
+                {domain.description && (
+                  <p className="text-gray-600 mt-2">{domain.description}</p>
+                )}
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-blue-600 mb-1">
+                  {Math.round(progress)}%
+                </div>
+                <div className="text-sm text-gray-500">
+                  {completedTasks} di {totalTasks} task
+                </div>
+              </div>
             </div>
             
-            <Button
-              onClick={() => {/* TODO: Implementare integrazione AI */}}
-              variant="outline"
-              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:from-purple-600 hover:to-pink-600"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              AI Assistant
-            </Button>
+            <Progress value={progress} className="h-3" />
           </div>
         </div>
 
-        {/* Progress Overview */}
-        <Card className="bg-white border-0 shadow-lg mb-8">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-1">
-                  {Math.round(progress)}%
-                </div>
-                <div className="text-sm text-gray-600">Completato</div>
-              </div>
-              
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600 mb-1">
-                  {completedTasks}
-                </div>
-                <div className="text-sm text-gray-600">Task Completati</div>
-              </div>
-              
-              <div className="text-center">
-                <div className="text-3xl font-bold text-yellow-600 mb-1">
-                  {totalTasks - completedTasks}
-                </div>
-                <div className="text-sm text-gray-600">Task Rimanenti</div>
-              </div>
-              
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-1">
-                  {totalTasks}
-                </div>
-                <div className="text-sm text-gray-600">Task Totali</div>
-              </div>
-            </div>
-            
-            <div className="mt-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">
-                  Progresso Generale
-                </span>
-                <span className="text-sm text-gray-600">
-                  {completedTasks}/{totalTasks}
-                </span>
-              </div>
-              <Progress value={progress} className="h-3" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tasks Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white border shadow-sm">
-            <TabsTrigger value="all" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-              Tutti ({totalTasks})
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="data-[state=active]:bg-yellow-600 data-[state=active]:text-white">
-              Da Fare ({totalTasks - completedTasks})
-            </TabsTrigger>
-            <TabsTrigger value="completed" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
-              Completati ({completedTasks})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab}>
-            {Object.keys(groupedTasks).length === 0 ? (
-              <Card className="bg-white border-0 shadow-md">
-                <CardContent className="p-12 text-center">
-                  <CheckCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {activeTab === 'completed' ? 'Nessun task completato' : 
-                     activeTab === 'pending' ? 'Nessun task da fare' : 'Nessun task disponibile'}
-                  </h3>
-                  <p className="text-gray-600">
-                    {activeTab === 'completed' ? 'Inizia a completare i task per vederli qui' :
-                     activeTab === 'pending' ? 'Ottimo lavoro! Tutti i task sono stati completati' :
-                     'Crea dei template nell\'area amministrazione per vedere i task qui'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-8">
-                {Object.entries(groupedTasks).map(([category, categoryTasks]) => (
-                  <Card key={category} className="bg-white border-0 shadow-lg">
-                    <CardHeader>
-                      <CardTitle className="text-xl text-gray-900 flex items-center justify-between">
-                        <span>{category}</span>
-                        <Badge variant="secondary">
-                          {categoryTasks.filter(t => t.completed).length}/{categoryTasks.length}
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        {categoryTasks.map((task) => (
-                          <div
-                            key={task.id}
-                            className={`p-6 rounded-lg border-2 transition-all duration-200 ${
-                              task.completed
-                                ? 'bg-green-50 border-green-200'
-                                : 'bg-white border-gray-200 hover:border-blue-300'
-                            }`}
+        {/* Tasks */}
+        {tasks.length === 0 ? (
+          <Card className="bg-white border-0 shadow-md">
+            <CardContent className="p-12 text-center">
+              <div className="text-6xl mb-4">📋</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Nessun task ancora
+              </h3>
+              <p className="text-gray-600">
+                I task verranno creati automaticamente quando aggiungi nuovi template dal pannello amministrativo
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {tasks.map((task) => (
+              <Card
+                key={task.id}
+                className={`bg-white border-0 shadow-md hover:shadow-lg transition-all duration-200 ${
+                  task.completed ? 'opacity-75' : ''
+                }`}
+              >
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <Checkbox
+                      checked={task.completed}
+                      onCheckedChange={(checked) => 
+                        handleTaskComplete(task.id, checked as boolean)
+                      }
+                      className="mt-1"
+                    />
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CardTitle className={`text-xl font-bold ${
+                          task.completed ? 'text-gray-500 line-through' : 'text-gray-900'
+                        }`}>
+                          {task.title}
+                        </CardTitle>
+                        
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{task.category}</Badge>
+                          <Badge 
+                            variant="secondary"
+                            className={`text-white ${getPriorityColor(task.priority)}`}
                           >
-                            <div className="flex items-start gap-4">
-                              <Checkbox
-                                checked={task.completed}
-                                onCheckedChange={(checked) => 
-                                  handleTaskToggle(task.id, checked as boolean)
-                                }
-                                className="mt-1"
-                              />
-                              
-                              <div className="flex-1 space-y-4">
-                                <div className="flex items-start justify-between mb-2">
-                                  <h4 className={`font-medium text-lg ${
-                                    task.completed 
-                                      ? 'text-gray-500 line-through' 
-                                      : 'text-gray-900'
-                                  }`}>
-                                    {task.title}
-                                  </h4>
-                                  <div className="flex items-center gap-2">
-                                    <Badge className={getPriorityColor(task.priority)}>
-                                      {getPriorityLabel(task.priority)}
-                                    </Badge>
-                                    {task.estimated_hours && (
-                                      <Badge variant="outline" className="text-xs">
-                                        {task.estimated_hours}h
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                {task.description && (
-                                  <p className={`text-sm mb-4 ${
-                                    task.completed ? 'text-gray-400' : 'text-gray-600'
-                                  }`}>
-                                    {task.description}
-                                  </p>
-                                )}
-
-                                {/* Tags */}
-                                {task.tags && task.tags.length > 0 && (
-                                  <div className="flex items-center gap-2 mb-4">
-                                    <Tag className="h-4 w-4 text-gray-500" />
-                                    <div className="flex flex-wrap gap-1">
-                                      {task.tags.map(tag => (
-                                        <Badge key={tag} variant="outline" className="text-xs">
-                                          {tag}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Dependencies */}
-                                {task.dependencies && task.dependencies.length > 0 && (
-                                  <div className="flex items-center gap-2 mb-4">
-                                    <Users className="h-4 w-4 text-gray-500" />
-                                    <div className="flex flex-wrap gap-1">
-                                      {task.dependencies.map(dep => (
-                                        <Badge key={dep} variant="secondary" className="text-xs">
-                                          {dep}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Reference Links */}
-                                {task.reference_links && task.reference_links.length > 0 && (
-                                  <div className="flex items-start gap-2 mb-4">
-                                    <ExternalLink className="h-4 w-4 text-gray-500 mt-1" />
-                                    <div className="space-y-1">
-                                      {task.reference_links.map(link => (
-                                        <a
-                                          key={link}
-                                          href={link}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="block text-blue-600 hover:underline text-sm"
-                                        >
-                                          {link}
-                                        </a>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Checklist */}
-                                {task.checklist_items && Array.isArray(task.checklist_items) && task.checklist_items.length > 0 && (
-                                  <div className="mb-4">
-                                    <h5 className="font-medium text-gray-900 mb-2">Checklist</h5>
-                                    <ChecklistManager 
-                                      items={task.checklist_items}
-                                      onChange={(items) => handleChecklistUpdate(task.id, items)}
-                                      readonly={task.completed}
-                                    />
-                                  </div>
-                                )}
-                                
-                                {task.completed && task.completed_at && (
-                                  <div className="text-sm text-green-600 flex items-center gap-1 mb-4">
-                                    <CheckCircle className="h-4 w-4" />
-                                    Completato il {new Date(task.completed_at).toLocaleDateString('it-IT')}
-                                  </div>
-                                )}
-                                
-                                <SubtaskManager 
-                                  taskId={task.id} 
-                                  isTaskCompleted={task.completed}
-                                />
-                                
-                                <TaskComments taskId={task.id} />
-                              </div>
-                            </div>
+                            {getPriorityLabel(task.priority)}
+                          </Badge>
+                          {task.estimated_hours && (
+                            <Badge variant="outline">
+                              {task.estimated_hours}h
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {task.completed && task.completed_at && (
+                          <div className="text-sm text-green-600 flex items-center gap-1">
+                            <CheckCircle className="h-4 w-4" />
+                            Completato il {new Date(task.completed_at).toLocaleDateString('it-IT')}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {task.description && (
+                        <p className={`text-sm mb-4 ${
+                          task.completed ? 'text-gray-500' : 'text-gray-600'
+                        }`}>
+                          {task.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="space-y-6">
+                  {/* Tags */}
+                  {task.tags && task.tags.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Tag className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">Tags</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {task.tags.map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Dependencies */}
+                  {task.dependencies && task.dependencies.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">Dipendenze</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {task.dependencies.map((dep) => (
+                          <Badge key={dep} variant="outline" className="text-xs">
+                            {dep}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Reference Links */}
+                  {task.reference_links && task.reference_links.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <LinkIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">Link di Riferimento</span>
+                      </div>
+                      <div className="space-y-1">
+                        {task.reference_links.map((link, idx) => (
+                          <div key={idx}>
+                            <a 
+                              href={link} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-600 hover:text-blue-800 underline break-all flex items-center gap-1"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              {link}
+                            </a>
                           </div>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+                    </div>
+                  )}
+                  
+                  {/* Checklist */}
+                  {task.checklist_items && (task.checklist_items as ChecklistItem[]).length > 0 && (
+                    <div>
+                      <span className="text-sm font-medium text-gray-700 mb-2 block">Checklist</span>
+                      <ChecklistManager
+                        items={task.checklist_items as ChecklistItem[]}
+                        onChange={(items) => handleChecklistUpdate(task.id, items)}
+                        readonly={task.completed}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Subtasks */}
+                  <SubtaskManager 
+                    taskId={task.id} 
+                    isTaskCompleted={task.completed}
+                  />
+                  
+                  {/* Comments */}
+                  <TaskComments taskId={task.id} />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
