@@ -151,7 +151,7 @@ const AdminPanel = () => {
       tags: template.tags || [],
       dependencies: template.dependencies || [],
       reference_links: template.reference_links || [],
-      checklist_items: (template.checklist_items as ChecklistItem[]) || []
+      checklist_items: (template.checklist_items as unknown as ChecklistItem[]) || []
     });
     setEditingTemplate(template.id);
     setIsCreateDialogOpen(true);
@@ -579,7 +579,7 @@ const AdminPanel = () => {
                       <div>
                         <span className="text-sm font-medium text-gray-700 mr-2">Checklist:</span>
                         <ChecklistManager
-                          items={template.checklist_items as ChecklistItem[]}
+                          items={template.checklist_items as unknown as ChecklistItem[]}
                           onChange={() => {}}
                           readonly={true}
                         />

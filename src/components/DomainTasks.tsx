@@ -365,7 +365,7 @@ const DomainTasks = () => {
                     <div>
                       <span className="text-sm font-medium text-gray-700 mb-2 block">Checklist</span>
                       <ChecklistManager
-                        items={task.checklist_items as ChecklistItem[]}
+                        items={task.checklist_items as unknown as ChecklistItem[]}
                         onChange={(items) => handleChecklistUpdate(task.id, items)}
                         readonly={task.completed}
                       />
