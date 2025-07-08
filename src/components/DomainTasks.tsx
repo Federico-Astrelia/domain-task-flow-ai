@@ -224,6 +224,15 @@ const DomainTasks = () => {
     return Math.round((completedTasks / tasks.length) * 100);
   };
 
+  const isTaskCompleted = (task: DomainTask) => {
+    if (!task.subtasks || task.subtasks.length === 0) {
+      return task.completed;
+    }
+    
+    const completedSubtasks = task.subtasks.filter((subtask: any) => subtask.completed).length;
+    return completedSubtasks === task.subtasks.length;
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -467,7 +476,7 @@ const DomainTasks = () => {
                     )}
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <SubtaskManager taskId={task.id} />
+                      <SubtaskManager taskId={task.id} isTaskCompleted={isTaskCompleted(task)} />
                       <TaskComments taskId={task.id} />
                     </div>
                   </div>
