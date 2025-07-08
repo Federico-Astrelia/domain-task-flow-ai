@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +14,18 @@ import { Database } from "@/integrations/supabase/types";
 import SubtaskManager from "./SubtaskManager";
 import TaskComments from "./TaskComments";
 
-type DomainTask = Database['public']['Tables']['domain_tasks']['Row'];
+type DomainTask = Database['public']['Tables']['domain_tasks']['Row'] & {
+  subtasks?: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    completed: boolean;
+    completed_at: string | null;
+    created_at: string;
+    updated_at: string;
+  }>;
+};
+
 type Domain = Database['public']['Tables']['domains']['Row'];
 type SortOption = 'priority' | 'created_at' | 'title';
 
