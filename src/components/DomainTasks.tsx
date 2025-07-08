@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { ArrowLeft, CheckCircle, Clock, AlertCircle, ExternalLink, Tag, Link as LinkIcon, Filter, ArrowUpDown } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
@@ -27,8 +25,8 @@ const DomainTasks = () => {
   const [tasks, setTasks] = useState<DomainTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>('created_at');
-  const [filterTag, setFilterTag] = useState<string>('');
-  const [filterDependency, setFilterDependency] = useState<string>('');
+  const [filterTag, setFilterTag] = useState<string>('all');
+  const [filterDependency, setFilterDependency] = useState<string>('all');
 
   useEffect(() => {
     if (id) {
@@ -150,11 +148,11 @@ const DomainTasks = () => {
 
   const filterTasks = (tasks: DomainTask[]) => {
     return tasks.filter((task) => {
-      const matchesTag = !filterTag || (task.tags && task.tags.some(tag => 
+      const matchesTag = filterTag === 'all' || (task.tags && task.tags.some(tag => 
         tag.toLowerCase().includes(filterTag.toLowerCase())
       ));
       
-      const matchesDependency = !filterDependency || (task.dependencies && task.dependencies.some(dep => 
+      const matchesDependency = filterDependency === 'all' || (task.dependencies && task.dependencies.some(dep => 
         dep.toLowerCase().includes(filterDependency.toLowerCase())
       ));
       
@@ -236,13 +234,13 @@ const DomainTasks = () => {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {domain.name}
+                  {domain?.name}
                 </h1>
                 <p className="text-gray-600 flex items-center gap-2">
                   <ExternalLink className="h-4 w-4" />
-                  {domain.url}
+                  {domain?.url}
                 </p>
-                {domain.description && (
+                {domain?.description && (
                   <p className="text-gray-600 mt-2">{domain.description}</p>
                 )}
               </div>
@@ -291,7 +289,7 @@ const DomainTasks = () => {
                     <SelectValue placeholder="Tutti i tag" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tutti i tag</SelectItem>
+                    <SelectItem value="all">Tutti i tag</SelectItem>
                     {getAllTags().map((tag) => (
                       <SelectItem key={tag} value={tag}>{tag}</SelectItem>
                     ))}
@@ -309,7 +307,7 @@ const DomainTasks = () => {
                     <SelectValue placeholder="Tutte le dipendenze" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tutte le dipendenze</SelectItem>
+                    <SelectItem value="all">Tutte le dipendenze</SelectItem>
                     {getAllDependencies().map((dep) => (
                       <SelectItem key={dep} value={dep}>{dep}</SelectItem>
                     ))}
@@ -321,8 +319,8 @@ const DomainTasks = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => {
-                    setFilterTag('');
-                    setFilterDependency('');
+                    setFilterTag('all');
+                    setFilterDependency('all');
                     setSortBy('created_at');
                   }}
                   className="w-full"
