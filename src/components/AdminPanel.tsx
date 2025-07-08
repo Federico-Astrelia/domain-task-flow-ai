@@ -10,21 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Edit, Trash2, Save, X, Tag, Link, CheckSquare } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X, Tag, Link, ArrowLeft } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
 import TemplateSubtaskManager from "./TemplateSubtaskManager";
-import ChecklistManager from "./ChecklistManager";
+import { useNavigate } from "react-router-dom";
 
 type TaskTemplate = Database['public']['Tables']['task_templates']['Row'];
 
-interface ChecklistItem {
-  id: string;
-  text: string;
-  completed: boolean;
-}
-
 const AdminPanel = () => {
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -37,8 +32,7 @@ const AdminPanel = () => {
     estimated_hours: '',
     tags: [] as string[],
     dependencies: [] as string[],
-    reference_links: [] as string[],
-    checklist_items: [] as ChecklistItem[]
+    reference_links: [] as string[]
   });
   const [newTag, setNewTag] = useState('');
   const [newDependency, setNewDependency] = useState('');
@@ -78,8 +72,7 @@ const AdminPanel = () => {
       estimated_hours: '',
       tags: [],
       dependencies: [],
-      reference_links: [],
-      checklist_items: []
+      reference_links: []
     });
     setNewTag('');
     setNewDependency('');
@@ -98,8 +91,7 @@ const AdminPanel = () => {
         estimated_hours: formData.estimated_hours ? parseInt(formData.estimated_hours) : null,
         tags: formData.tags.length > 0 ? formData.tags : null,
         dependencies: formData.dependencies.length > 0 ? formData.dependencies : null,
-        reference_links: formData.reference_links.length > 0 ? formData.reference_links : null,
-        checklist_items: formData.checklist_items as any
+        reference_links: formData.reference_links.length > 0 ? formData.reference_links : null
       };
 
       if (editingTemplate) {
@@ -150,8 +142,7 @@ const AdminPanel = () => {
       estimated_hours: template.estimated_hours?.toString() || '',
       tags: template.tags || [],
       dependencies: template.dependencies || [],
-      reference_links: template.reference_links || [],
-      checklist_items: (template.checklist_items as unknown as ChecklistItem[]) || []
+      reference_links: template.reference_links || []
     });
     setEditingTemplate(template.id);
     setIsCreateDialogOpen(true);
@@ -240,6 +231,15 @@ const AdminPanel = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="max-w-6xl mx-auto p-6">
         <div className="mb-8">
+          <Button 
+            onClick={() => navigate('/')} 
+            variant="outline" 
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Torna alla Home
+          </Button>
+          
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -419,18 +419,6 @@ const AdminPanel = () => {
                     </div>
                   </div>
 
-                  {/* Checklist Section */}
-                  <div>
-                    <Label className="flex items-center gap-2 mb-2">
-                      <CheckSquare className="h-4 w-4" />
-                      Checklist
-                    </Label>
-                    <ChecklistManager
-                      items={formData.checklist_items}
-                      onChange={(items) => setFormData({...formData, checklist_items: items})}
-                    />
-                  </div>
-
                   {/* Subtasks Section - only show for editing existing templates */}
                   {editingTemplate && (
                     <div>
@@ -572,17 +560,6 @@ const AdminPanel = () => {
                             </div>
                           ))}
                         </div>
-                      </div>
-                    )}
-                    
-                    {template.checklist_items && Array.isArray(template.checklist_items) && template.checklist_items.length > 0 && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700 mr-2">Checklist:</span>
-                        <ChecklistManager
-                          items={template.checklist_items as unknown as ChecklistItem[]}
-                          onChange={() => {}}
-                          readonly={true}
-                        />
                       </div>
                     )}
                   </div>

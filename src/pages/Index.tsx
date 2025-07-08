@@ -7,7 +7,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Globe, CheckCircle, Clock, AlertCircle, MoreVertical, Archive, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Globe, CheckCircle, Clock, AlertCircle, MoreVertical, Archive, Trash2, ArrowUpDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
@@ -23,10 +24,13 @@ interface Domain {
   progress: number;
 }
 
+type SortOption = 'created_at' | 'name' | 'progress';
+
 const Index = () => {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [showClosedDomains, setShowClosedDomains] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('created_at');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -152,6 +156,21 @@ const Index = () => {
     }
   };
 
+  const sortDomains = (domains: Domain[], sortBy: SortOption) => {
+    return [...domains].sort((a, b) => {
+      switch (sortBy) {
+        case 'created_at':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'progress':
+          return b.progress - a.progress;
+        default:
+          return 0;
+      }
+    });
+  };
+
   const getProgressColor = (progress: number) => {
     if (progress === 100) return "text-green-600";
     if (progress > 50) return "text-blue-600";
@@ -169,6 +188,7 @@ const Index = () => {
     ? domains.filter(d => d.status === 'closed')
     : domains.filter(d => d.status === 'active');
 
+  const sortedDomains = sortDomains(filteredDomains, sortBy);
   const activeDomains = domains.filter(d => d.status === 'active');
 
   if (loading) {
@@ -297,8 +317,28 @@ const Index = () => {
           </div>
         )}
 
+        {/* Sorting Controls */}
+        {sortedDomains.length > 0 && (
+          <div className="mb-6 flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Ordina per:</span>
+            </div>
+            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at">Data di Creazione</SelectItem>
+                <SelectItem value="name">Ordine Alfabetico</SelectItem>
+                <SelectItem value="progress">Completezza</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Domains Grid */}
-        {filteredDomains.length === 0 ? (
+        {sortedDomains.length === 0 ? (
           <Card className="bg-white border-0 shadow-md">
             <CardContent className="p-12 text-center">
               <Globe className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -324,7 +364,7 @@ const Index = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredDomains.map((domain) => (
+            {sortedDomains.map((domain) => (
               <Card
                 key={domain.id}
                 className={`bg-white border-0 shadow-md hover:shadow-xl transition-all duration-300 ${
