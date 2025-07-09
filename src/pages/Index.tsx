@@ -8,10 +8,15 @@ import {
   closeDomain, 
   reopenDomain, 
   deleteDomain, 
-  sortDomains 
+  sortDomains,
+  filterDomains,
+  pinDomain,
+  unpinDomain
 } from "@/utils/domainUtils";
+import { savePreferences, getPreferences } from "@/utils/cookieUtils";
 import DomainHeader from "@/components/DomainHeader";
 import DomainStats from "@/components/DomainStats";
+import DomainSearchBar from "@/components/DomainSearchBar";
 import DomainSortControls from "@/components/DomainSortControls";
 import DomainsGrid from "@/components/DomainsGrid";
 import DomainLoading from "@/components/DomainLoading";
@@ -21,8 +26,15 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [showClosedDomains, setShowClosedDomains] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('created_at');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
+    // Carica preferenze salvate
+    const preferences = getPreferences();
+    setSortBy(preferences.sortBy as SortOption);
+    setSearchQuery(preferences.searchQuery);
+    setShowClosedDomains(preferences.showClosedDomains);
+    
     loadDomains();
   }, []);
 
@@ -40,6 +52,22 @@ const Index = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSortChange = (newSortBy: SortOption) => {
+    setSortBy(newSortBy);
+    savePreferences({ sortBy: newSortBy });
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    savePreferences({ searchQuery: query });
+  };
+
+  const handleToggleClosedDomains = () => {
+    const newValue = !showClosedDomains;
+    setShowClosedDomains(newValue);
+    savePreferences({ showClosedDomains: newValue });
   };
 
   const handleCloseDomain = async (domainId: string) => {
@@ -86,11 +114,40 @@ const Index = () => {
     }
   };
 
+  const handlePinDomain = async (domainId: string) => {
+    try {
+      await pinDomain(domainId);
+      loadDomains();
+    } catch (error) {
+      console.error('Error pinning domain:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile fissare il dominio",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUnpinDomain = async (domainId: string) => {
+    try {
+      await unpinDomain(domainId);
+      loadDomains();
+    } catch (error) {
+      console.error('Error unpinning domain:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile rimuovere il fissaggio",
+        variant: "destructive"
+      });
+    }
+  };
+
   const filteredDomains = showClosedDomains 
     ? domains.filter(d => d.status === 'closed')
     : domains.filter(d => d.status === 'active');
 
-  const sortedDomains = sortDomains(filteredDomains, sortBy);
+  const searchedDomains = filterDomains(filteredDomains, searchQuery);
+  const sortedDomains = sortDomains(searchedDomains, sortBy);
   const activeDomains = domains.filter(d => d.status === 'active');
 
   if (loading) {
@@ -102,14 +159,20 @@ const Index = () => {
       <div className="max-w-7xl mx-auto p-6">
         <DomainHeader 
           showClosedDomains={showClosedDomains}
-          onToggleClosedDomains={() => setShowClosedDomains(!showClosedDomains)}
+          onToggleClosedDomains={handleToggleClosedDomains}
         />
 
         {!showClosedDomains && <DomainStats domains={activeDomains} />}
 
+        <DomainSearchBar 
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          resultsCount={searchedDomains.length}
+        />
+
         <DomainSortControls 
           sortBy={sortBy}
-          onSortChange={setSortBy}
+          onSortChange={handleSortChange}
           domainsCount={sortedDomains.length}
         />
 
@@ -119,6 +182,8 @@ const Index = () => {
           onCloseDomain={handleCloseDomain}
           onReopenDomain={handleReopenDomain}
           onDeleteDomain={handleDeleteDomain}
+          onPinDomain={handlePinDomain}
+          onUnpinDomain={handleUnpinDomain}
         />
       </div>
     </div>

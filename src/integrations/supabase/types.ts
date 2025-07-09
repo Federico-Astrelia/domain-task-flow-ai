@@ -92,6 +92,9 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          pinned: boolean
+          pinned_at: string | null
+          pinned_order: number | null
           status: string | null
           updated_at: string
           url: string
@@ -101,6 +104,9 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          pinned?: boolean
+          pinned_at?: string | null
+          pinned_order?: number | null
           status?: string | null
           updated_at?: string
           url: string
@@ -110,6 +116,9 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          pinned?: boolean
+          pinned_at?: string | null
+          pinned_order?: number | null
           status?: string | null
           updated_at?: string
           url?: string

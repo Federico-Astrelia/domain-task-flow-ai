@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CheckCircle, Clock, AlertCircle, MoreVertical, Archive, Trash2 } from "lucide-react";
+import { CheckCircle, Clock, AlertCircle, MoreVertical, Archive, Trash2, Pin, PinOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Domain, getProgressColor } from "@/utils/domainUtils";
 
@@ -13,9 +13,18 @@ interface DomainCardProps {
   onCloseDomain: (domainId: string) => void;
   onReopenDomain: (domainId: string) => void;
   onDeleteDomain: (domainId: string, domainName: string) => void;
+  onPinDomain: (domainId: string) => void;
+  onUnpinDomain: (domainId: string) => void;
 }
 
-const DomainCard = ({ domain, onCloseDomain, onReopenDomain, onDeleteDomain }: DomainCardProps) => {
+const DomainCard = ({ 
+  domain, 
+  onCloseDomain, 
+  onReopenDomain, 
+  onDeleteDomain,
+  onPinDomain,
+  onUnpinDomain
+}: DomainCardProps) => {
   const navigate = useNavigate();
 
   const getStatusIcon = (progress: number) => {
@@ -26,11 +35,20 @@ const DomainCard = ({ domain, onCloseDomain, onReopenDomain, onDeleteDomain }: D
 
   return (
     <Card
-      className={`bg-white border-0 shadow-md hover:shadow-xl transition-all duration-300 ${
+      className={`bg-white border-0 shadow-md hover:shadow-xl transition-all duration-300 relative ${
         domain.status === 'active' ? 'cursor-pointer transform hover:-translate-y-1' : 'opacity-75'
-      }`}
+      } ${domain.pinned ? 'ring-2 ring-blue-200 border-blue-100' : ''}`}
       onClick={() => domain.status === 'active' && navigate(`/domains/${domain.id}`)}
     >
+      {domain.pinned && (
+        <div className="absolute top-2 right-2 z-10">
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
+            <Pin className="h-3 w-3 mr-1" />
+            Fissato
+          </Badge>
+        </div>
+      )}
+      
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -57,6 +75,31 @@ const DomainCard = ({ domain, onCloseDomain, onReopenDomain, onDeleteDomain }: D
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {domain.status === 'active' && (
+                  <>
+                    {domain.pinned ? (
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUnpinDomain(domain.id);
+                        }}
+                      >
+                        <PinOff className="h-4 w-4 mr-2" />
+                        Rimuovi Fissaggio
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPinDomain(domain.id);
+                        }}
+                      >
+                        <Pin className="h-4 w-4 mr-2" />
+                        Fissa in Alto
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                )}
                 {domain.status === 'active' ? (
                   <DropdownMenuItem 
                     onClick={(e) => {

@@ -9,6 +9,8 @@ interface DomainsGridProps {
   onCloseDomain: (domainId: string) => void;
   onReopenDomain: (domainId: string) => void;
   onDeleteDomain: (domainId: string, domainName: string) => void;
+  onPinDomain: (domainId: string) => void;
+  onUnpinDomain: (domainId: string) => void;
 }
 
 const DomainsGrid = ({ 
@@ -16,7 +18,9 @@ const DomainsGrid = ({
   showClosedDomains, 
   onCloseDomain, 
   onReopenDomain, 
-  onDeleteDomain 
+  onDeleteDomain,
+  onPinDomain,
+  onUnpinDomain
 }: DomainsGridProps) => {
   if (domains.length === 0) {
     return <DomainEmptyState showClosedDomains={showClosedDomains} />;
@@ -31,6 +35,8 @@ const DomainsGrid = ({
           onCloseDomain={onCloseDomain}
           onReopenDomain={onReopenDomain}
           onDeleteDomain={onDeleteDomain}
+          onPinDomain={onPinDomain}
+          onUnpinDomain={onUnpinDomain}
         />
       ))}
     </div>

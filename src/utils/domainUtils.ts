@@ -9,6 +9,9 @@ export interface Domain {
   description?: string;
   status: string;
   created_at: string;
+  pinned: boolean;
+  pinned_at: string | null;
+  pinned_order: number | null;
   total_tasks: number;
   completed_tasks: number;
   progress: number;
@@ -43,6 +46,54 @@ export const fetchDomains = async (): Promise<Domain[]> => {
   }) || [];
 
   return processedDomains;
+};
+
+export const pinDomain = async (domainId: string) => {
+  // Get the highest pinned_order to add this domain at the top
+  const { data: pinnedDomains } = await supabase
+    .from('domains')
+    .select('pinned_order')
+    .eq('pinned', true)
+    .order('pinned_order', { ascending: false })
+    .limit(1);
+
+  const newPinnedOrder = pinnedDomains && pinnedDomains.length > 0 
+    ? (pinnedDomains[0].pinned_order || 0) + 1 
+    : 1;
+
+  const { error } = await supabase
+    .from('domains')
+    .update({ 
+      pinned: true, 
+      pinned_at: new Date().toISOString(),
+      pinned_order: newPinnedOrder
+    })
+    .eq('id', domainId);
+
+  if (error) throw error;
+
+  toast({
+    title: "Successo",
+    description: "Dominio fissato in alto"
+  });
+};
+
+export const unpinDomain = async (domainId: string) => {
+  const { error } = await supabase
+    .from('domains')
+    .update({ 
+      pinned: false, 
+      pinned_at: null,
+      pinned_order: null
+    })
+    .eq('id', domainId);
+
+  if (error) throw error;
+
+  toast({
+    title: "Successo", 
+    description: "Dominio rimosso dai fissati"
+  });
 };
 
 export const closeDomain = async (domainId: string) => {
@@ -93,8 +144,33 @@ export const deleteDomain = async (domainId: string, domainName: string) => {
   return true;
 };
 
+export const filterDomains = (domains: Domain[], searchQuery: string) => {
+  if (!searchQuery.trim()) return domains;
+  
+  const query = searchQuery.toLowerCase();
+  return domains.filter(domain =>
+    domain.name.toLowerCase().includes(query) ||
+    domain.url.toLowerCase().includes(query) ||
+    (domain.description && domain.description.toLowerCase().includes(query))
+  );
+};
+
 export const sortDomains = (domains: Domain[], sortBy: SortOption) => {
-  return [...domains].sort((a, b) => {
+  // Separa domini fissati e non fissati
+  const pinnedDomains = domains.filter(d => d.pinned);
+  const unpinnedDomains = domains.filter(d => !d.pinned);
+
+  // Ordina i domini fissati per pinned_order (più recenti prima)
+  pinnedDomains.sort((a, b) => {
+    if (sortBy === 'name') {
+      return a.name.localeCompare(b.name);
+    }
+    // Per gli altri ordinamenti o come fallback, usa pinned_order
+    return (b.pinned_order || 0) - (a.pinned_order || 0);
+  });
+
+  // Ordina i domini non fissati normalmente
+  unpinnedDomains.sort((a, b) => {
     switch (sortBy) {
       case 'created_at':
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -106,6 +182,9 @@ export const sortDomains = (domains: Domain[], sortBy: SortOption) => {
         return 0;
     }
   });
+
+  // Combina: fissati prima, poi non fissati
+  return [...pinnedDomains, ...unpinnedDomains];
 };
 
 export const getProgressColor = (progress: number) => {

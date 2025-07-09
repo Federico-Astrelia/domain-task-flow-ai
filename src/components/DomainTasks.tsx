@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, CheckCircle, Clock, AlertCircle, ExternalLink, Tag, Link as LinkIcon, Filter, ArrowUpDown } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, AlertCircle, ExternalLink, Tag, Link as LinkIcon, Filter } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
+import { saveDomainFilters, getDomainFilters } from "@/utils/cookieUtils";
 import SubtaskManager from "./SubtaskManager";
 import TaskComments from "./TaskComments";
 
@@ -40,10 +40,25 @@ const DomainTasks = () => {
   const [filterDependency, setFilterDependency] = useState<string>('all');
 
   useEffect(() => {
+    // Carica filtri salvati
+    const savedFilters = getDomainFilters();
+    setSortBy(savedFilters.sortBy as SortOption);
+    setFilterTag(savedFilters.filterTag);
+    setFilterDependency(savedFilters.filterDependency);
+
     if (id) {
       fetchDomainAndTasks();
     }
   }, [id]);
+
+  // Salva filtri quando cambiano
+  useEffect(() => {
+    saveDomainFilters({
+      sortBy,
+      filterTag,
+      filterDependency
+    });
+  }, [sortBy, filterTag, filterDependency]);
 
   // Set up real-time subscriptions
   useEffect(() => {
